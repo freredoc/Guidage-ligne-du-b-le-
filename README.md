@@ -115,6 +115,55 @@ avec du réseau : les tuiles consultées et les données sont mises en cache.
 
 ---
 
+## 🤖 APK Android (Capacitor)
+
+L'app peut être empaquetée en **APK autonome** (bundle web embarqué, fonctionne
+hors ligne, GPS/vibration/écran natifs) via Capacitor.
+
+### Build automatique (CI) — APK signé en Release
+
+Le workflow `.github/workflows/android.yml` compile et **signe** l'APK, puis :
+- sur un **tag `v*`** (ex. `v1.0.0`) → publie l'APK dans les **Releases** ;
+- en **lancement manuel** → APK disponible en **artefact** du run.
+
+Secrets à définir une fois (Settings → Secrets and variables → Actions) :
+
+| Secret | Contenu |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | keystore `.keystore` encodé base64 |
+| `ANDROID_KEYSTORE_PASSWORD` | mot de passe du keystore |
+| `ANDROID_KEY_ALIAS` | alias de la clé |
+| `ANDROID_KEY_PASSWORD` | mot de passe de la clé |
+
+Générer un keystore :
+
+```bash
+keytool -genkeypair -v -keystore tan-release.keystore -alias tan \
+  -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 tan-release.keystore   # → valeur de ANDROID_KEYSTORE_BASE64
+```
+
+Puis publier :
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0   # déclenche le build + la Release
+```
+
+> ⚠️ Conservez précieusement le keystore : c'est lui qui signe **toutes** les
+> mises à jour de l'app. Ne le committez jamais (il est dans `.gitignore`).
+
+### Build local
+
+```bash
+npm run build
+npx cap sync android
+cd android && ./gradlew assembleDebug   # APK debug : app/build/outputs/apk/debug/
+```
+
+Nécessite JDK 17+ et le SDK Android. Ouvrir le projet : `npx cap open android`.
+
+---
+
 ## 🗂️ Données
 
 Le fichier `src/data/tan_gps_final.json` contient, pour chaque ligne :

@@ -8,3 +8,12 @@ yarn-debug.log*
 yarn-error.log*
 .vite
 *.tsbuildinfo
+
+# Clés de signature Android — NE JAMAIS committer
+*.keystore
+*.jks
+*.keystore.b64
+
+# Assets web copiés dans le projet Android (régénérés par `npx cap sync`)
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
