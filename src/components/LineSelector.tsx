@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { Direction, LinesFile, ServiceConfig } from '../types'
+import type { UpdateInfo } from '../utils/update'
 
 interface Props {
   lines: LinesFile
   onStart: (config: ServiceConfig) => void
+  update: UpdateInfo | null
 }
 
 // Ordre d'affichage : Chronobus (C) puis lignes numérotées.
@@ -32,7 +34,7 @@ function origin(lines: LinesFile, lineId: string, dir: Direction): string {
   return stops[0].name
 }
 
-export function LineSelector({ lines, onStart }: Props) {
+export function LineSelector({ lines, onStart, update }: Props) {
   const ids = useMemo(() => sortLineIds(Object.keys(lines)), [lines])
   const [lineId, setLineId] = useState<string | null>(null)
   const [direction, setDirection] = useState<Direction | null>(null)
@@ -46,6 +48,28 @@ export function LineSelector({ lines, onStart }: Props) {
         TAN <span>GPS</span> Bus
       </h1>
       <div className="subtitle">Guidage ligne · réseau TAN — Nantes Métropole</div>
+
+      {update && update.hasUpdate && (
+        <a
+          className="update-banner"
+          href={
+            update.native ? update.apkUrl ?? update.pageUrl : update.pageUrl
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => {
+            if (!update.native) {
+              e.preventDefault()
+              location.reload()
+            }
+          }}
+        >
+          <span>🔔 Nouvelle version {update.latest} disponible</span>
+          <span className="up-cta">
+            {update.native ? 'Télécharger' : 'Recharger'}
+          </span>
+        </a>
+      )}
 
       <div className="section-label">Ligne</div>
       <div className="line-grid">

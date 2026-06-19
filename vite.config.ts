@@ -1,6 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
+// Version affichée et comparée pour la mise à jour : tag injecté par la CI
+// (VITE_APP_VERSION) sinon version du package.json, préfixée « v ».
+const appVersion = process.env.VITE_APP_VERSION || `v${pkg.version}`
 
 // Base path : déploiement possible sur GitHub Pages (sous-dossier) ou racine.
 // Surchargeable via la variable d'env BASE_PATH (ex: "/guidage-ligne-du-b-le-/").
@@ -8,6 +14,9 @@ const base = process.env.BASE_PATH || '/'
 
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   plugins: [
     react(),
     VitePWA({

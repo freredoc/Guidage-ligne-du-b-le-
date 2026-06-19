@@ -1,7 +1,7 @@
 {
   "name": "tan-gps-bus",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.6",
   "type": "module",
   "description": "GPS spécialisé pour la conduite de bus du réseau TAN (SEMITAN, Nantes Métropole) — PWA installable.",
   "scripts": {

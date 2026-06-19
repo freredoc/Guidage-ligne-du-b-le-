@@ -8,6 +8,7 @@ import {
   setPreferredVoice,
   isSpeechSupported,
 } from './utils/speech'
+import { checkUpdate, type UpdateInfo } from './utils/update'
 
 const lines = linesData as unknown as LinesFile
 
@@ -36,6 +37,16 @@ export default function App() {
   const [service, setService] = useState<ServiceConfig | null>(null)
   const [settings, setSettings] = useState<AppSettings>(loadSettings)
   const [soundUnlocked, setSoundUnlocked] = useState(false)
+  const [update, setUpdate] = useState<UpdateInfo | null>(null)
+
+  // Vérification automatique d'une mise à jour au démarrage (silencieuse si
+  // hors ligne ou déjà à jour). Surtout utile pour l'APK (la PWA s'actualise
+  // seule via le service worker).
+  useEffect(() => {
+    checkUpdate()
+      .then((info) => info.hasUpdate && setUpdate(info))
+      .catch(() => {})
+  }, [])
 
   // Persiste les réglages et applique la voix préférée.
   useEffect(() => {
@@ -56,7 +67,9 @@ export default function App() {
   }
 
   if (!service) {
-    return <LineSelector lines={lines} onStart={setService} />
+    return (
+      <LineSelector lines={lines} onStart={setService} update={update} />
+    )
   }
 
   const line = lines[service.lineId]

@@ -170,6 +170,78 @@ button {
 .start-btn:disabled {
   opacity: 0.4;
 }
+
+/* Bannière de mise à jour (écran de sélection) */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: rgba(226, 0, 26, 0.14);
+  border: 1px solid rgba(226, 0, 26, 0.5);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.update-banner .up-cta {
+  background: var(--accent);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Bloc mise à jour dans les paramètres */
+.check-btn {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.check-btn:disabled {
+  opacity: 0.5;
+}
+.upd-note {
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  margin: 4px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.upd-note.ok {
+  background: rgba(61, 220, 132, 0.14);
+  color: var(--ok);
+}
+.upd-note.warn {
+  background: rgba(255, 176, 32, 0.16);
+  color: var(--warn);
+}
+.upd-note.new {
+  background: rgba(226, 0, 26, 0.14);
+  border: 1px solid rgba(226, 0, 26, 0.5);
+  color: #fff;
+}
+.upd-dl {
+  display: inline-block;
+  text-align: center;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 800;
+  padding: 11px 14px;
+  border-radius: 10px;
+  text-decoration: none;
+}
 .spacer-top {
   margin-top: 22px;
 }

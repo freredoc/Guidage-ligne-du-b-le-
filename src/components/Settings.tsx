@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AppSettings } from '../types'
 import { listVoices, onVoicesChanged, isSpeechSupported } from '../utils/speech'
+import { APP_VERSION, checkUpdate, type UpdateInfo } from '../utils/update'
 
 interface Props {
   settings: AppSettings
@@ -28,6 +29,21 @@ function Toggle({
 
 export function Settings({ settings, onChange, onClose, onEndService }: Props) {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [upd, setUpd] = useState<UpdateInfo | null>(null)
+  const [updState, setUpdState] = useState<'idle' | 'checking' | 'error'>(
+    'idle',
+  )
+
+  const runCheck = async () => {
+    setUpdState('checking')
+    try {
+      const info = await checkUpdate()
+      setUpd(info)
+      setUpdState('idle')
+    } catch {
+      setUpdState('error')
+    }
+  }
 
   useEffect(() => {
     const refresh = () => setVoices(listVoices())
@@ -143,6 +159,51 @@ export function Settings({ settings, onChange, onClose, onEndService }: Props) {
           </div>
           <span style={{ color: 'var(--text-dim)', fontSize: 14 }}>Mètres</span>
         </div>
+
+        <div className="setting-row">
+          <div className="label">
+            <strong>Mise à jour</strong>
+            <small>Version installée {APP_VERSION}</small>
+          </div>
+          <button
+            className="check-btn"
+            onClick={runCheck}
+            disabled={updState === 'checking'}
+          >
+            {updState === 'checking' ? 'Vérification…' : 'Vérifier'}
+          </button>
+        </div>
+
+        {updState === 'error' && (
+          <div className="upd-note warn">
+            Vérification impossible (réseau ?). Réessaie une fois en ligne.
+          </div>
+        )}
+        {upd && updState === 'idle' && !upd.hasUpdate && (
+          <div className="upd-note ok">À jour ✓ (dernière : {upd.latest})</div>
+        )}
+        {upd && upd.hasUpdate && (
+          <div className="upd-note new">
+            <strong>Nouvelle version {upd.latest} disponible</strong>
+            {upd.native ? (
+              <a
+                className="upd-dl"
+                href={upd.apkUrl ?? upd.pageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                ⬇️ Télécharger l'APK
+              </a>
+            ) : (
+              <button
+                className="upd-dl"
+                onClick={() => location.reload()}
+              >
+                ↻ Recharger pour mettre à jour
+              </button>
+            )}
+          </div>
+        )}
 
         <button className="end-btn" onClick={onEndService}>
           Fin de service
