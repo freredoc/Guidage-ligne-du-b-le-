@@ -1,0 +1,60 @@
+name: Rafraîchir les données (GTFS TAN)
+
+# Télécharge le GTFS officiel TAN (open data Nantes Métropole), en extrait les
+# tracés précis + arrêts des 8 lignes, régénère src/data/tan_gps_final.json et
+# commite la mise à jour sur main. Les runners GitHub ont accès à Internet
+# (contrairement à l'environnement de dev), d'où ce traitement en CI.
+
+on:
+  workflow_dispatch:
+    inputs:
+      gtfs_url:
+        description: "URL du gtfs-tan.zip (open data Nantes Métropole)"
+        required: true
+        default: https://data.nantesmetropole.fr/api/explore/v2.1/catalog/datasets/244400404_tan-arrets-horaires-circuits/files/16a1a0af5946619af621baa4ad9ee662
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Télécharger le GTFS
+        run: |
+          curl -sL --fail -o gtfs-tan.zip "${{ github.event.inputs.gtfs_url }}"
+          ls -lh gtfs-tan.zip
+
+      - name: Extraire le GTFS
+        run: |
+          mkdir -p gtfs
+          unzip -o gtfs-tan.zip -d gtfs
+          echo "--- fichiers GTFS ---"; ls gtfs
+
+      - name: Convertir GTFS → tan_gps_final.json
+        run: node scripts/build-gtfs.mjs gtfs src/data/tan_gps_final.json
+
+      - name: Commit si modifié
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- src/data/tan_gps_final.json; then
+            echo "Aucun changement de données."
+          else
+            git add src/data/tan_gps_final.json
+            git commit -m "data: tracés précis depuis le GTFS officiel TAN"
+            git push origin HEAD:main
+            echo "Données mises à jour et poussées."
+          fi
+
+      - name: Nettoyage
+        if: always()
+        run: rm -rf gtfs gtfs-tan.zip
