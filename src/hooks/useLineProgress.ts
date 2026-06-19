@@ -1,0 +1,151 @@
+import { useMemo, useRef, useState, useEffect } from 'react'
+import type { LatLon, Stop } from '../types'
+import { haversine, snapToRoute, cumulativeDistance } from '../utils/geo'
+
+export interface OrderedStop extends Stop {
+  /** Distance cumulée de l'arrêt le long du tracé (m). */
+  along: number
+  /** Index original dans la liste de la ligne. */
+  originalIndex: number
+}
+
+export interface LineProgress {
+  orderedStops: OrderedStop[]
+  /** Index (dans orderedStops) de l'arrêt courant / prochain à desservir. */
+  nextIndex: number
+  /** Prochain arrêt à desservir, ou null si terminus atteint. */
+  nextStop: OrderedStop | null
+  /** Distance haversine à vol d'oiseau jusqu'au prochain arrêt (m). */
+  distanceToNext: number
+  /** ETA en secondes basée sur la vitesse GPS, ou null. */
+  etaSeconds: number | null
+  /** Point projeté du bus sur le tracé (snap-to-route). */
+  snapPoint: LatLon | null
+  /** Distance perpendiculaire au tracé (m) — grande = hors itinéraire. */
+  offRouteDistance: number
+  /** true quand le terminus est atteint. */
+  isFinished: boolean
+  /** Tableau parallèle à orderedStops : arrêt déjà desservi ou non. */
+  passed: boolean[]
+}
+
+const PASS_THRESHOLD_M = 50
+
+/**
+ * Logique de progression sur la ligne :
+ *  - ordonne les arrêts selon leur position le long du tracé (gère les 2 sens) ;
+ *  - détermine l'arrêt courant via la distance cumulée projetée (recalage
+ *    automatique en cas de saut GPS / demi-tour) ;
+ *  - confirme le passage d'un arrêt sous 50 m avec vitesse > 0.
+ */
+export function useLineProgress(
+  route: LatLon[],
+  stops: Stop[],
+  lat: number | null,
+  lon: number | null,
+  speed: number | null,
+): LineProgress {
+  // Pré-calcul : ordonner les arrêts le long du tracé choisi.
+  const orderedStops = useMemo<OrderedStop[]>(() => {
+    const withAlong = stops.map((s, originalIndex) => {
+      const snap = snapToRoute(s.lat, s.lon, route)
+      const along = snap ? snap.along : cumulativeDistance(route, 0)
+      return { ...s, along, originalIndex }
+    })
+    withAlong.sort((a, b) => a.along - b.along)
+    return withAlong
+  }, [route, stops])
+
+  // Pointeur de progression : n'avance pas en arrière sauf recalage explicite.
+  const [nextIndex, setNextIndex] = useState(0)
+  const nextIndexRef = useRef(0)
+  nextIndexRef.current = nextIndex
+
+  // Réinitialise quand la ligne/le sens change.
+  useEffect(() => {
+    setNextIndex(0)
+    nextIndexRef.current = 0
+  }, [orderedStops])
+
+  const result = useMemo<LineProgress>(() => {
+    const n = orderedStops.length
+    const passed = new Array<boolean>(n).fill(false)
+
+    if (lat == null || lon == null || n === 0) {
+      const idx = Math.min(nextIndex, n - 1)
+      for (let i = 0; i < idx; i++) passed[i] = true
+      return {
+        orderedStops,
+        nextIndex: idx,
+        nextStop: n > 0 ? orderedStops[idx] : null,
+        distanceToNext: Infinity,
+        etaSeconds: null,
+        snapPoint: null,
+        offRouteDistance: Infinity,
+        isFinished: false,
+        passed,
+      }
+    }
+
+    const snap = snapToRoute(lat, lon, route)
+    const alongPos = snap ? snap.along : 0
+    const offRoute = snap ? snap.distance : Infinity
+
+    // Recalage : index « naturel » = premier arrêt encore devant nous le long
+    // du tracé. Robuste aux sauts GPS et demi-tours.
+    let naturalIndex = orderedStops.findIndex((s) => s.along > alongPos + 5)
+    if (naturalIndex === -1) naturalIndex = n // tous dépassés -> terminus
+
+    // On suit l'avancement le plus avancé entre le pointeur courant et le
+    // calcul géométrique (évite les reculs intempestifs dus au bruit GPS,
+    // mais permet le recalage avant en cas de saut franc).
+    let idx = Math.max(nextIndexRef.current, naturalIndex)
+
+    // Confirmation de passage : sous 50 m du prochain arrêt ET vitesse > 0.
+    if (idx < n) {
+      const target = orderedStops[idx]
+      const d = haversine(lat, lon, target.lat, target.lon)
+      const moving = speed != null && speed > 0
+      if (d < PASS_THRESHOLD_M && moving) {
+        idx = idx + 1
+      }
+    }
+    idx = Math.min(idx, n)
+
+    const isFinished = idx >= n
+    const nextStop = isFinished ? null : orderedStops[idx]
+
+    for (let i = 0; i < idx; i++) passed[i] = true
+
+    const distanceToNext = nextStop
+      ? haversine(lat, lon, nextStop.lat, nextStop.lon)
+      : 0
+
+    const etaSeconds =
+      nextStop && speed != null && speed > 0.5
+        ? distanceToNext / speed
+        : null
+
+    return {
+      orderedStops,
+      nextIndex: isFinished ? n : idx,
+      nextStop,
+      distanceToNext,
+      etaSeconds,
+      snapPoint: snap ? snap.point : null,
+      offRouteDistance: offRoute,
+      isFinished,
+      passed,
+    }
+  }, [orderedStops, route, lat, lon, speed, nextIndex])
+
+  // Persiste l'avancement calculé dans l'état (déclenche les annonces côté UI).
+  useEffect(() => {
+    if (result.nextIndex !== nextIndexRef.current) {
+      nextIndexRef.current = result.nextIndex
+      setNextIndex(result.nextIndex)
+    }
+  }, [result.nextIndex])
+
+  return result
+}
