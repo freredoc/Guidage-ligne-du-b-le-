@@ -120,6 +120,54 @@ export function snapToRoute(
   return best
 }
 
+/**
+ * Localise une suite de points (arrêts, dans l'ordre officiel) le long d'un
+ * tracé et renvoie leur distance cumulée. La recherche avance segment par
+ * segment (chaque arrêt est cherché en avant du précédent), ce qui produit des
+ * valeurs monotones et reste correct sur les tracés à boucle (terminus).
+ */
+export function locateStopsAlong(route: LatLon[], points: LatLon[]): number[] {
+  const n = route.length
+  if (n < 2) return points.map(() => 0)
+  const cum = new Array<number>(n).fill(0)
+  for (let i = 1; i < n; i++) {
+    cum[i] =
+      cum[i - 1] +
+      haversine(route[i - 1][0], route[i - 1][1], route[i][0], route[i][1])
+  }
+
+  const out: number[] = []
+  let startSeg = 0
+  let prevAlong = 0
+  for (const [lat, lon] of points) {
+    const p = toLocalXY(lat, lon, lat)
+    let best = { dist: Infinity, along: cum[startSeg], seg: startSeg }
+    for (let i = startSeg; i < n - 1; i++) {
+      const a = toLocalXY(route[i][0], route[i][1], lat)
+      const b = toLocalXY(route[i + 1][0], route[i + 1][1], lat)
+      const abx = b.x - a.x
+      const aby = b.y - a.y
+      const segLenSq = abx * abx + aby * aby
+      let t = 0
+      if (segLenSq > 0) {
+        t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / segLenSq
+        t = Math.max(0, Math.min(1, t))
+      }
+      const projLat = route[i][0] + t * (route[i + 1][0] - route[i][0])
+      const projLon = route[i][1] + t * (route[i + 1][1] - route[i][1])
+      const d = haversine(lat, lon, projLat, projLon)
+      if (d < best.dist) {
+        best = { dist: d, along: cum[i] + t * (cum[i + 1] - cum[i]), seg: i }
+      }
+    }
+    const along = Math.max(prevAlong, best.along)
+    out.push(along)
+    prevAlong = along
+    startSeg = best.seg
+  }
+  return out
+}
+
 /** Distance cumulée d'un point d'index donné depuis le début du tracé (m). */
 export function cumulativeDistance(route: LatLon[], index: number): number {
   let d = 0

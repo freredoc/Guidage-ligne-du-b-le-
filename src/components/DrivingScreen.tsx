@@ -28,12 +28,13 @@ export function DrivingScreen({
   onEndService,
 }: Props) {
   const route = line.shapes[service.direction]
+  const dirStops = line.stops[service.direction]
   const geo = useGeolocation(true)
   useWakeLock(true)
 
   const progress = useLineProgress(
     route,
-    line.stops,
+    dirStops,
     geo.lat,
     geo.lon,
     geo.speed,
@@ -52,14 +53,10 @@ export function DrivingScreen({
   useEffect(() => setAutoFollowLive(settings.autoFollow), [settings.autoFollow])
 
   const directionLabel = useMemo(() => {
-    const stops = line.stops
-    if (stops.length === 0) return ''
-    const term =
-      service.direction === 'dir0'
-        ? stops[stops.length - 1].name
-        : stops[0].name
-    return `Sens ${term}`
-  }, [line.stops, service.direction])
+    if (dirStops.length === 0) return ''
+    // Terminus = dernier arrêt du sens (ordre GTFS).
+    return `Sens ${dirStops[dirStops.length - 1].name}`
+  }, [dirStops])
 
   const displayIndex =
     overrideIndex ?? Math.min(progress.nextIndex, progress.orderedStops.length - 1)

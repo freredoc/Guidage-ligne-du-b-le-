@@ -49,7 +49,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 async function routeThrough(points) {
   // OSRM attend lon,lat ; on envoie les points (arrêts/timing) comme étapes.
   const coords = points.map((p) => `${p[1]},${p[0]}`).join(';')
-  const url = `${OSRM}/route/v1/driving/${coords}?overview=full&geometries=geojson&continue_straight=true`
+  // continue_straight=false : laisse OSRM tourner naturellement aux étapes
+  // (évite les boucles parasites qu'imposait continue_straight=true).
+  const url = `${OSRM}/route/v1/driving/${coords}?overview=full&geometries=geojson&continue_straight=false`
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const res = await fetch(url)

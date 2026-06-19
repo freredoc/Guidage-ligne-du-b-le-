@@ -16,7 +16,11 @@ export interface LineData {
     dir0: LatLon[]
     dir1: LatLon[]
   }
-  stops: Stop[]
+  /** Arrêts par sens, dans l'ordre officiel du GTFS (stop_sequence). */
+  stops: {
+    dir0: Stop[]
+    dir1: Stop[]
+  }
 }
 
 export type LinesFile = Record<string, LineData>

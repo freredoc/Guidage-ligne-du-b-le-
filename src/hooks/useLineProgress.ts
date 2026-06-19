@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import type { LatLon, Stop } from '../types'
-import { haversine, snapToRoute, cumulativeDistance } from '../utils/geo'
+import { haversine, snapToRoute, locateStopsAlong } from '../utils/geo'
 
 export interface OrderedStop extends Stop {
   /** Distance cumulée de l'arrêt le long du tracé (m). */
@@ -37,10 +37,10 @@ const RECAL_MARGIN_M = 70
 
 /**
  * Logique de progression sur la ligne :
- *  - ordonne les arrêts selon leur position le long du tracé (gère les 2 sens) ;
- *  - détermine l'arrêt courant via la distance cumulée projetée (recalage
- *    automatique en cas de saut GPS / demi-tour) ;
- *  - confirme le passage d'un arrêt sous 50 m avec vitesse > 0.
+ *  - conserve l'ordre officiel des arrêts (GTFS stop_sequence), sans re-tri ;
+ *  - localise chaque arrêt le long du tracé de façon monotone (robuste aux
+ *    boucles de terminus) pour la distance cumulée ;
+ *  - avance via l'arrivée réelle (< 40 m) ou un recalage franc (> 70 m au-delà).
  */
 export function useLineProgress(
   route: LatLon[],
@@ -49,15 +49,18 @@ export function useLineProgress(
   lon: number | null,
   speed: number | null,
 ): LineProgress {
-  // Pré-calcul : ordonner les arrêts le long du tracé choisi.
+  // On garde l'ordre GTFS ; on calcule seulement la distance le long du tracé,
+  // de manière monotone (chaque arrêt est cherché en avant du précédent).
   const orderedStops = useMemo<OrderedStop[]>(() => {
-    const withAlong = stops.map((s, originalIndex) => {
-      const snap = snapToRoute(s.lat, s.lon, route)
-      const along = snap ? snap.along : cumulativeDistance(route, 0)
-      return { ...s, along, originalIndex }
-    })
-    withAlong.sort((a, b) => a.along - b.along)
-    return withAlong
+    const alongs = locateStopsAlong(
+      route,
+      stops.map((s) => [s.lat, s.lon] as LatLon),
+    )
+    return stops.map((s, originalIndex) => ({
+      ...s,
+      along: alongs[originalIndex],
+      originalIndex,
+    }))
   }, [route, stops])
 
   // Pointeur de progression : n'avance pas en arrière sauf recalage explicite.

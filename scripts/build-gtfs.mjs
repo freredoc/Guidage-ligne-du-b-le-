@@ -300,7 +300,8 @@ async function main() {
       color: info.color,
       text_color: info.text,
       shapes,
-      stops: stopsByDir[0].length ? stopsByDir[0] : stopsByDir[1],
+      // Arrêts PAR SENS, dans l'ordre officiel du GTFS (stop_sequence).
+      stops: { dir0: stopsByDir[0], dir1: stopsByDir[1] },
     }
 
     // Contrôle qualité : écart max des arrêts au tracé de leur sens.
@@ -315,7 +316,8 @@ async function main() {
     report.push({ short, p0: shapes.dir0.length, p1: shapes.dir1.length, m0, m1 })
     console.log(
       `${short.padEnd(3)} dir0:${shapes.dir0.length}pts(écart≤${m0.toFixed(0)}m) ` +
-        `dir1:${shapes.dir1.length}pts(écart≤${m1.toFixed(0)}m) arrêts:${out[short].stops.length}`,
+        `dir1:${shapes.dir1.length}pts(écart≤${m1.toFixed(0)}m) ` +
+        `arrêts:${stopsByDir[0].length}/${stopsByDir[1].length}`,
     )
   }
 

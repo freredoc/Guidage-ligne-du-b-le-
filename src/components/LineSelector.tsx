@@ -18,21 +18,18 @@ function sortLineIds(ids: string[]): string[] {
   })
 }
 
-/** Terminus = premier et dernier arrêt du tracé dans le sens choisi. */
+/** Terminus = dernier arrêt du sens choisi (ordre GTFS). */
 function terminus(lines: LinesFile, lineId: string, dir: Direction): string {
-  const line = lines[lineId]
-  const stops = line.stops
-  if (stops.length === 0) return ''
-  // Le sens dir1 parcourt la ligne en sens inverse.
-  return dir === 'dir0'
-    ? stops[stops.length - 1].name
-    : stops[0].name
+  const stops = lines[lineId].stops[dir]
+  if (!stops || stops.length === 0) return ''
+  return stops[stops.length - 1].name
 }
 
+/** Origine = premier arrêt du sens choisi. */
 function origin(lines: LinesFile, lineId: string, dir: Direction): string {
-  const stops = lines[lineId].stops
-  if (stops.length === 0) return ''
-  return dir === 'dir0' ? stops[0].name : stops[stops.length - 1].name
+  const stops = lines[lineId].stops[dir]
+  if (!stops || stops.length === 0) return ''
+  return stops[0].name
 }
 
 export function LineSelector({ lines, onStart }: Props) {
