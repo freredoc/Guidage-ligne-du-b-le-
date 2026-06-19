@@ -14,6 +14,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version à publier (tag, ex: v1.0.0)"
+        required: true
+        default: v1.0.0
 
 permissions:
   contents: write
@@ -64,11 +69,20 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon
 
+      - name: Déterminer la version
+        id: ver
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Renommer l'APK
         id: apk
         run: |
           SRC=android/app/build/outputs/apk/release/app-release.apk
-          NAME="tan-gps-bus-${GITHUB_REF_NAME}.apk"
+          NAME="tan-gps-bus-${{ steps.ver.outputs.tag }}.apk"
           cp "$SRC" "$NAME"
           echo "path=$NAME" >> "$GITHUB_OUTPUT"
 
@@ -79,14 +93,15 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
 
-      - name: Publier la Release (sur tag)
-        if: github.ref_type == 'tag'
+      - name: Publier la Release
         uses: softprops/action-gh-release@v2
         with:
+          # action-gh-release crée le tag s'il n'existe pas encore.
+          tag_name: ${{ steps.ver.outputs.tag }}
           files: ${{ steps.apk.outputs.path }}
-          name: TAN GPS Bus ${{ github.ref_name }}
+          name: TAN GPS Bus ${{ steps.ver.outputs.tag }}
           body: |
-            APK Android signé de **TAN GPS Bus** (${{ github.ref_name }}).
+            APK Android signé de **TAN GPS Bus** (${{ steps.ver.outputs.tag }}).
 
             Installation : téléchargez l'APK sur le téléphone, autorisez
             « installer des applications inconnues » pour votre navigateur/gestionnaire
