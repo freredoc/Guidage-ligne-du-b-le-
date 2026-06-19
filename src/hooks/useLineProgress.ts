@@ -29,7 +29,11 @@ export interface LineProgress {
   passed: boolean[]
 }
 
-const PASS_THRESHOLD_M = 50
+const PASS_THRESHOLD_M = 40
+// Marge de recalage : un arrêt n'est sauté automatiquement que si la position
+// projetée le dépasse d'au moins cette distance (évite de sauter un arrêt
+// encore devant le bus quand on est seulement « à sa hauteur »).
+const RECAL_MARGIN_M = 70
 
 /**
  * Logique de progression sur la ligne :
@@ -90,25 +94,28 @@ export function useLineProgress(
     const snap = snapToRoute(lat, lon, route)
     const alongPos = snap ? snap.along : 0
     const offRoute = snap ? snap.distance : Infinity
+    const moving = speed != null && speed > 0
 
-    // Recalage : index « naturel » = premier arrêt encore devant nous le long
-    // du tracé. Robuste aux sauts GPS et demi-tours.
-    let naturalIndex = orderedStops.findIndex((s) => s.along > alongPos + 5)
-    if (naturalIndex === -1) naturalIndex = n // tous dépassés -> terminus
+    // L'arrêt n'est considéré « passé » que lorsqu'on l'a réellement atteint
+    // (proximité), pas dès qu'on est à sa hauteur sur le tracé. On part du
+    // pointeur courant et on n'avance que sur deux conditions claires.
+    let idx = nextIndexRef.current
 
-    // On suit l'avancement le plus avancé entre le pointeur courant et le
-    // calcul géométrique (évite les reculs intempestifs dus au bruit GPS,
-    // mais permet le recalage avant en cas de saut franc).
-    let idx = Math.max(nextIndexRef.current, naturalIndex)
+    // 1) Recalage : on a nettement dépassé l'arrêt cible le long du tracé
+    //    (saut GPS, arrêt manqué, prise de service en cours de ligne). Marge
+    //    large pour ne JAMAIS sauter un arrêt encore devant nous.
+    while (idx < n && alongPos > orderedStops[idx].along + RECAL_MARGIN_M) {
+      idx++
+    }
 
-    // Confirmation de passage : sous 50 m du prochain arrêt ET vitesse > 0.
-    if (idx < n) {
-      const target = orderedStops[idx]
-      const d = haversine(lat, lon, target.lat, target.lon)
-      const moving = speed != null && speed > 0
-      if (d < PASS_THRESHOLD_M && moving) {
-        idx = idx + 1
-      }
+    // 2) Passage normal : on est arrivé sur l'arrêt (< seuil) en roulant.
+    while (
+      idx < n &&
+      moving &&
+      haversine(lat, lon, orderedStops[idx].lat, orderedStops[idx].lon) <
+        PASS_THRESHOLD_M
+    ) {
+      idx++
     }
     idx = Math.min(idx, n)
 
