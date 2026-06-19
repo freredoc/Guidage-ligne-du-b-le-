@@ -83,9 +83,18 @@ async function main() {
         const routed = await routeThrough(pts)
         const origLen = lineLength(shape)
         const newLen = lineLength(routed)
-        // Garde-fou : on rejette un itinéraire aberrant (trop long/court).
-        if (routed.length < pts.length || newLen > origLen * 1.8 || newLen < origLen * 0.6) {
-          console.log(`${id} ${dir}: OSRM rejeté (len ${(newLen / 1000).toFixed(1)}km vs ${(origLen / 1000).toFixed(1)}km) — tracé conservé`)
+        // Garde-fou strict : OSRM suit normalement le même corridor que le
+        // tracé officiel (longueur ~identique, un peu plus pour les courbes).
+        // S'il rallonge trop, c'est un DÉTOUR par de mauvaises rues → on rejette
+        // et on conserve le tracé droit officiel (pas de fausse boucle).
+        if (
+          routed.length < pts.length ||
+          newLen > origLen * 1.15 ||
+          newLen < origLen * 0.85
+        ) {
+          console.log(
+            `${id} ${dir}: OSRM rejeté (détour ${(newLen / 1000).toFixed(1)}km vs ${(origLen / 1000).toFixed(1)}km) — tracé droit conservé`,
+          )
           continue
         }
         line.shapes[dir] = routed
