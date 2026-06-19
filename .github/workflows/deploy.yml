@@ -1,0 +1,63 @@
+name: Déploiement GitHub Pages
+
+# Construit la PWA et la publie sur GitHub Pages.
+# - automatiquement à chaque push sur la branche par défaut (main/master) ;
+# - manuellement depuis l'onglet Actions (workflow_dispatch), depuis n'importe
+#   quelle branche.
+#
+# Prérequis (une seule fois) : Repository → Settings → Pages →
+#   « Build and deployment » → Source : « GitHub Actions ».
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Permissions nécessaires au déploiement Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement à la fois ; n'annule pas un déploiement en cours.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (base path = nom du dépôt)
+        env:
+          # Sert le site sous https://<user>.github.io/<repo>/
+          BASE_PATH: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - name: Upload artifact Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
