@@ -208,7 +208,7 @@ async function main() {
         })
         .filter(Boolean)
     }
-    // Repli : si un sens manque, on inverse l'autre.
+    // Repli : si un sens manque totalement, on inverse l'autre (shape + arrêts).
     if (shapes.dir0.length === 0 && shapes.dir1.length > 0) {
       shapes.dir0 = [...shapes.dir1].reverse()
       stopsByDir['0'] = [...stopsByDir['1']].reverse()
@@ -216,6 +216,16 @@ async function main() {
     if (shapes.dir1.length === 0 && shapes.dir0.length > 0) {
       shapes.dir1 = [...shapes.dir0].reverse()
       stopsByDir['1'] = [...stopsByDir['0']].reverse()
+    }
+    // Dans ce GTFS, un seul sens porte le tracé détaillé ; l'autre est grossier
+    // (~1 point/arrêt). On remplace alors le tracé grossier par le tracé riche
+    // inversé (le bus suit quasi le même chemin), en gardant les arrêts du GTFS.
+    const n0 = shapes.dir0.length
+    const n1 = shapes.dir1.length
+    if (n0 >= n1 && n1 < n0 * 0.5) {
+      shapes.dir1 = [...shapes.dir0].reverse()
+    } else if (n1 > n0 && n0 < n1 * 0.5) {
+      shapes.dir0 = [...shapes.dir1].reverse()
     }
 
     // Les arrêts de l'app : on prend la séquence du sens 0 (référence).
