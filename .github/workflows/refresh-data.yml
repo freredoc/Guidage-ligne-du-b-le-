@@ -42,6 +42,9 @@ jobs:
       - name: Convertir GTFS → tan_gps_final.json
         run: node scripts/build-gtfs.mjs gtfs src/data/tan_gps_final.json
 
+      - name: Recaler les tracés grossiers sur route (OSRM)
+        run: node scripts/refine-osrm.mjs src/data/tan_gps_final.json
+
       - name: Commit si modifié
         run: |
           git config user.name "github-actions[bot]"
