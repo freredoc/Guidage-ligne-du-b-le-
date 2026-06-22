@@ -58,7 +58,8 @@ function loadStops() {
   for (let k = 1; k < lines.length; k++) {
     const v = parseCsvLine(lines[k])
     const key = norm(v[iN])
-    if (!m.has(key)) m.set(key, [parseFloat(v[iLa]), parseFloat(v[iLo])])
+    if (!m.has(key))
+      m.set(key, { lat: parseFloat(v[iLa]), lon: parseFloat(v[iLo]), name: v[iN].trim() })
   }
   return m
 }
@@ -129,13 +130,15 @@ async function main() {
     }
   }
 
+  // Renvoie { lat, lon, name } : nom propre du GTFS pour un arrêt, sinon nom
+  // mis en forme pour un point fixe géocodé (dépôt, Porte).
   const resolve1 = (name) => {
     const n = norm(name)
-    if (infraCoords[n]) return infraCoords[n]
+    if (infraCoords[n])
+      return { lat: infraCoords[n][0], lon: infraCoords[n][1], name: prettify(name) }
     const gn = aliasN[n] || n
-    if (stops.has(gn)) return stops.get(gn)
-    if (stops.has(n)) return stops.get(n)
-    return null
+    const s = stops.get(gn) || stops.get(n)
+    return s ? { lat: s.lat, lon: s.lon, name: s.name } : null
   }
 
   let added = 0
@@ -143,7 +146,7 @@ async function main() {
     const pts = []
     for (const name of h.points) {
       const c = resolve1(name)
-      if (c) pts.push({ id: '', name: prettify(name), lat: c[0], lon: c[1] })
+      if (c) pts.push({ id: '', name: c.name, lat: c.lat, lon: c.lon })
       else console.log(`  HLP ${h.id}: point non résolu « ${name} » (ignoré)`)
     }
     if (pts.length < 2) {
@@ -173,16 +176,20 @@ async function main() {
   console.log(`\n✓ ${added} HLP ajoutés à ${DATA}`)
 }
 
+const SMALL = new Set(['DE', 'LA', 'LE', 'DU', 'L', 'DES', 'ET'])
 function prettify(name) {
-  // Met en forme un nom de point HLP (depuis sa clé normalisée éventuelle).
+  // Met en forme un nom de point HLP (dépôt, Porte).
   return name
     .replace(/\bN(\d+)\b/g, 'n°$1')
     .replace(/\bPTE\b/g, 'Porte')
     .replace(/\bBLX\b/g, 'Le Bêle')
     .split(' ')
-    .map((w) =>
-      w.length > 2 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w,
-    )
+    .map((w) => {
+      const u = w.toUpperCase()
+      if (SMALL.has(u)) return w.toLowerCase()
+      if (/^N°\d+$/.test(w)) return w
+      return w.length > 1 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w
+    })
     .join(' ')
 }
 
