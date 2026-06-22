@@ -102,18 +102,30 @@ async function main() {
   const def = JSON.parse(readFileSync(HLPDEF, 'utf8'))
   const data = JSON.parse(readFileSync(DATA, 'utf8'))
 
-  // Géocodage des points fixes (dépôt, Portes).
+  // Géocodage des points fixes (dépôt, Portes). 'geo' peut être une chaîne ou
+  // une liste de requêtes candidates (on garde la 1re qui tombe dans Nantes).
   const infraCoords = {}
   for (const [key, info] of Object.entries(def.infra)) {
-    try {
-      const c = await geocode(info.geo)
-      if (c) {
-        infraCoords[key] = c
-        console.log(`geo ✓ ${key} -> ${c[0].toFixed(5)},${c[1].toFixed(5)}`)
-      } else console.log(`geo ✗ ${key} (« ${info.geo} ») hors zone/introuvable`)
-      await sleep(1100) // politesse Nominatim (1 req/s)
-    } catch (e) {
-      console.log(`geo ! ${key} : ${e.message}`)
+    const queries = Array.isArray(info.geo) ? info.geo : [info.geo]
+    let found = null
+    for (const q of queries) {
+      try {
+        const c = await geocode(q)
+        await sleep(1100) // politesse Nominatim (1 req/s)
+        if (c) {
+          found = c
+          break
+        }
+      } catch (e) {
+        console.log(`geo ! ${key} (« ${q} ») : ${e.message}`)
+        await sleep(1100)
+      }
+    }
+    if (found) {
+      infraCoords[key] = found
+      console.log(`geo ✓ ${key} -> ${found[0].toFixed(5)},${found[1].toFixed(5)}`)
+    } else {
+      console.log(`geo ✗ ${key} introuvable/hors zone`)
     }
   }
 

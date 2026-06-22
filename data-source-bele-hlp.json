@@ -1,16 +1,29 @@
 {
   "_comment": "Haut Le Pied (déplacements sans voyageurs) — dépôt Le Bêle (BLX) et Portes du périphérique vers les terminus. Source : doc interne SEMITAN Le Bêle 2025-2026. Points résolus via le GTFS (arrêts) ou géocodés (dépôt/Portes). 'geo' = indice de requête pour le géocodage.",
   "infra": {
-    "BLX": { "geo": "Centre d'exploitation Le Bêle, Nantes" },
+    "BLX": {
+      "geo": [
+        "Rue du Bêle, Nantes",
+        "Le Bêle, Nantes, France",
+        "Dépôt Semitan Le Bêle, Nantes",
+        "Centre d'exploitation Le Bêle, Nantes"
+      ]
+    },
     "BEAUJOIRE": { "geo": "Porte de la Beaujoire, Nantes" },
     "PTE BEAUJOIRE N40": { "geo": "Porte de la Beaujoire, Nantes" },
     "PTE DE L ESTUAIRE N30": { "geo": "Porte de l'Estuaire, Nantes" },
     "PTE DE LA CHAPELLE N39": { "geo": "Porte de la Chapelle, Nantes" },
     "PTE DE SAINT HERBLAIN N31": { "geo": "Porte de Saint-Herblain, Nantes" },
     "PTE DE CHEZINE N34": { "geo": "Porte de Chézine, Saint-Herblain" },
-    "PTE DE GESVRES N38": { "geo": "Porte de Gesvres, Nantes" },
-    "NANTES EST N24": { "geo": "Porte de Nantes Est, Nantes" },
-    "LA CHAPELLE SUR ERDRE N25": { "geo": "Porte de la Chapelle-sur-Erdre, Nantes" }
+    "PTE DE GESVRES N38": {
+      "geo": ["Porte de Gesvres, Nantes", "Boulevard de Gesvres, Nantes"]
+    },
+    "NANTES EST N24": {
+      "geo": ["Porte de Nantes Est", "Échangeur Nantes Est, périphérique"]
+    },
+    "LA CHAPELLE SUR ERDRE N25": {
+      "geo": "Porte de la Chapelle-sur-Erdre, Nantes"
+    }
   },
   "hlp": [
     {
