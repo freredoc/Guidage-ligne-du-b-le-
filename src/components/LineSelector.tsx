@@ -35,7 +35,15 @@ function origin(lines: LinesFile, lineId: string, dir: Direction): string {
 }
 
 export function LineSelector({ lines, onStart, update }: Props) {
-  const ids = useMemo(() => sortLineIds(Object.keys(lines)), [lines])
+  const ids = useMemo(
+    () =>
+      sortLineIds(Object.keys(lines).filter((id) => lines[id].kind !== 'hlp')),
+    [lines],
+  )
+  const hlpIds = useMemo(
+    () => Object.keys(lines).filter((id) => lines[id].kind === 'hlp'),
+    [lines],
+  )
   const [lineId, setLineId] = useState<string | null>(null)
   const [direction, setDirection] = useState<Direction | null>(null)
   const [serviceNumber, setServiceNumber] = useState('')
@@ -94,6 +102,34 @@ export function LineSelector({ lines, onStart, update }: Props) {
           )
         })}
       </div>
+
+      {hlpIds.length > 0 && (
+        <>
+          <div className="section-label">HLP · Haut Le Pied</div>
+          <div className="hlp-list">
+            {hlpIds.map((id) => {
+              const line = lines[id]
+              const active = id === lineId
+              return (
+                <button
+                  key={id}
+                  className={`hlp-btn${active ? ' active' : ''}`}
+                  onClick={() => {
+                    setLineId(id)
+                    setDirection(null)
+                  }}
+                >
+                  <span className="hlp-dot" style={{ background: line.color }} />
+                  <span className="hlp-name">{line.nom}</span>
+                  {line.lignes && line.lignes.length > 0 && (
+                    <span className="hlp-lines">{line.lignes.join(' · ')}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
 
       {lineId && (
         <>

@@ -1,0 +1,54 @@
+name: Construire les HLP (géocodage)
+
+# Télécharge le GTFS (coordonnées des arrêts), géocode les points fixes
+# (dépôt Le Bêle, Portes) via OpenStreetMap, construit les parcours HLP et les
+# fusionne dans src/data/tan_gps_final.json. À relancer si data-source-bele-hlp.json
+# change.
+
+on:
+  workflow_dispatch:
+    inputs:
+      gtfs_url:
+        description: "URL du gtfs-tan.zip"
+        required: true
+        default: https://data.nantesmetropole.fr/api/explore/v2.1/catalog/datasets/244400404_tan-arrets-horaires-circuits/files/16a1a0af5946619af621baa4ad9ee662
+
+permissions:
+  contents: write
+
+jobs:
+  hlp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Télécharger + extraire le GTFS
+        run: |
+          curl -sL --fail -o gtfs-tan.zip "${{ github.event.inputs.gtfs_url }}"
+          mkdir -p gtfs && unzip -o gtfs-tan.zip -d gtfs >/dev/null
+
+      - name: Construire les HLP (géocodage Nominatim)
+        run: node scripts/build-hlp.mjs gtfs src/data/tan_gps_final.json data-source-bele-hlp.json
+
+      - name: Commit si modifié
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- src/data/tan_gps_final.json; then
+            echo "Aucun changement."
+          else
+            git add src/data/tan_gps_final.json
+            git commit -m "data: ajout des parcours HLP (géocodés)"
+            git push origin HEAD:main
+            echo "HLP ajoutés et poussés."
+          fi
+
+      - name: Nettoyage
+        if: always()
+        run: rm -rf gtfs gtfs-tan.zip

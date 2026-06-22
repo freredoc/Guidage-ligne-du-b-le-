@@ -21,6 +21,10 @@ export interface LineData {
     dir0: Stop[]
     dir1: Stop[]
   }
+  /** 'hlp' pour un parcours Haut Le Pied (sinon ligne commerciale). */
+  kind?: 'hlp'
+  /** Pour un HLP : lignes desservies (info). */
+  lignes?: string[]
 }
 
 export type LinesFile = Record<string, LineData>
