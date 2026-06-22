@@ -38,8 +38,8 @@ jobs:
 
       - name: Commit si modifié
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "Claude"
+          git config user.email "noreply@anthropic.com"
           if git diff --quiet -- src/data/tan_gps_final.json; then
             echo "Aucun changement."
           else
